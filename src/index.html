@@ -166,7 +166,7 @@ More nutrition-related information will be disclosed in due-process.
       </div>
 
 <div class="form-popup" id="myForm">
-  <form action="javascript:;" onsubmit="submit(this)" class="form-container">
+  <form action="javascript:;" onsubmit="submitdata(this)" class="form-container">
    <!-- <h1>Login</h1> -->
 
     <label for="dt"><b>Date:</b></label>
@@ -187,7 +187,7 @@ More nutrition-related information will be disclosed in due-process.
     <label for="notes"><b>Requests (Special Occassions/Dietary Restrictions/Preferences):</b></label>
     <input type="text" id="notes">
 
-    <button type="submit" onclick="submitdata(this.form)" class="btn">Reserve</button>
+    <button type="submit"class="btn">Reserve</button>
     <button type="button" class="btn cancel" onclick="closeForm()">Close</button><AntiforgeryToken />
   </form>
 </div>
@@ -201,8 +201,14 @@ let today = (new Date() < minDate) ? minDate : new Date();
   let year = today.getFullYear(); // typeof = number
   let currentDate = `${year}-${month}-${day}`; // typeof = string;
   document.getElementById("dt").value = currentDate
-
+var loading = false;
   async function submitdata(form){
+
+    if(loading){
+      return;
+    }
+    loading = true;
+ var errorCode = '';
   const clientData = {
     Forename: form.fname.value,
     Surname: form.lname.value,
@@ -229,7 +235,7 @@ let today = (new Date() < minDate) ? minDate : new Date();
 //console.log(response.text);
  // alert ('response formed successfully: ' + response.value);
   const result = await response.json();
-
+errorCode = response.status;
   //3/4 Retrieve client id by email
    const endpoint2 = `/data-api/rest/Reservation/`;
   try{
@@ -238,10 +244,12 @@ let today = (new Date() < minDate) ? minDate : new Date();
 const endpoint3 = `/data-api/rest/Client/Phone/${clientData.Phone}`;
     const response2 = await fetch(endpoint3);
   const result2 = await response2.json();
-  console.log(result2.value);
+  errorCode = result2.status;
+  //console.log(result2.value);
   reservationData.ClientId = result2.value.Id;
   } catch (error){
     console.error(error);  
+    errorCode = error.status;
   }
   //4/4 Create reservation with client id
   try{
@@ -252,14 +260,20 @@ const endpoint3 = `/data-api/rest/Client/Phone/${clientData.Phone}`;
     body: JSON.stringify(reservationData)
   });
   const result3 = await response3.json();
+  errorCode = result3.status;
+  if(response3.ok){
+  alert('Your reservation was made successfully')
+  }
   } catch (error){
     console.error(error);  
+    errorCode = error.status;
   }
-  alert('Your reservation was made successfully')
 } catch (error){
   console.error(error);
+  errorCode = error.status;
 }
     closeForm()
+    loading = false;
   }
 function reserve() {
 //Finds available reservation slots
@@ -271,55 +285,6 @@ function openForm() {
 
 function closeForm() {
   document.getElementById("myForm").style.display = "none";
-}
-async function submit(form){  
-  alert('clicked');
-  const data = {
-    Date: Date.parse( form.dt.value, form.tm.value),
-    Size: int.parse(form.size.value),
-    Notes: form.notes.value,
-    Client: new Client(form.fname.value, form.lname.value, form.num.value)
-  };
-//this is an api to handle database operations
-  const endpoint = `/data-api/rest/Client/`;
-  try{
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data.Client)
-  });
-  const result = await response.json();
-  //console.table(result.value);
-} catch (error){
-  console.error('error calling stored procedure');
-}
-
-try{
-  endpoint = `/data-api/rest/Person/Phone`;
-  const response = await fetch(`${endpoint}/${data.Client.PhoneNumber}`);
-  const result = await response.json();
-  data.Client.id = result.id.stringify;
-} catch (error){
-
-}
-//For the reservation, the client ID is pulled.
-  endpoint = `/data-api/rest/Reservation/`;
-  try{
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  });
-  const result = await response.json();
-  //console.table(result.value);
-} catch (error){
-  console.error('error calling stored procedure');
-}
-closeForm();
-alert('reservation successful');
-  //Your restful requests will use the built in data-api endpoint to manipulate date without writing any backend code.
-  //Because you want to trigger a stored procedure instead of simply inserting, you can either copy the stored procedure protocol for each table, or use an azure function app to substitute the built in api
-  //For now, a client will be created, then a reservation.
 }
 </script>
 
