@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>W3.CSS Template</title>
+    <title>EMJI</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
@@ -123,6 +123,7 @@ body {font-family: Arial, Helvetica, sans-serif;}
      <!-- <i class="fa fa-download"></i> Download Latest Menu-->
      <i class="fa fa-download"></i> Reserve A Table
     </button>
+    <p>For large tables please email emjilondon@gmail.com</p>
     <!--info for next event-->
     <header>
       <hr>
@@ -165,32 +166,101 @@ More nutrition-related information will be disclosed in due-process.
       </div>
 
 <div class="form-popup" id="myForm">
-  <form action="/action_page.php" class="form-container">
-    <h1>Login</h1>
+  <form action="javascript:;" onsubmit="submit(this)" class="form-container">
+   <!-- <h1>Login</h1> -->
 
     <label for="dt"><b>Date:</b></label>
-    <input type="date" name="dts" required>
+    <input name="datefield" min="2024-08-05" max="2024-08-11" type="date" id="dt" required/>
+    <input type="time" value="17:00" min="9:00" max="22:45" id="tm" required/>
     <br/>
     <br/>
-    <label for="fname"><b>First Name:</b></label>
-    <input type="text" name="fname" required>
+    <label id="test1" for="fname"><b>First Name:</b></label>
+    <input name="test2" type="text" id="fname" required/>
     <label for="lname"><b>Last Name:</b></label>
-    <input type="text" name="lname" required>
+    <input type="text" id="lname" required/>
     <label for="num"><b>Phone Number:</b></label>
-    <input type="text" name="num" required>
+    <input type="text" id="num" required/>
     <label for="size"><b>No. Of People:</b></label>
-    <input type="number" name="size" max="4" required>
+    <input type="number" value="2" id="size" min="1" max="4" required/>
     <br/>
     <br/>
     <label for="notes"><b>Requests (Special Occassions/Dietary Restrictions/Preferences):</b></label>
-    <input type="text" name="notes" required>
+    <input type="text" id="notes">
 
-    <button type="submit" class="btn">Reserve</button>
+    <button type="submit" onclick="submitdata(this.form)" class="btn">Reserve</button>
     <button type="button" class="btn cancel" onclick="closeForm()">Close</button><AntiforgeryToken />
   </form>
 </div>
 
 <script>
+  let minDate = new Date("2024-08-05");
+let today = (new Date() < minDate) ? minDate : new Date();
+
+  let day = today.getDate(); // typeof = number
+  let month = ('0' + (today.getMonth()+1)).slice(-2) // typeof = number
+  let year = today.getFullYear(); // typeof = number
+  let currentDate = `${year}-${month}-${day}`; // typeof = string;
+  document.getElementById("dt").value = currentDate
+
+  async function submitdata(form){
+  const clientData = {
+    Forename: form.fname.value,
+    Surname: form.lname.value,
+    Phone: form.num.value
+  };
+  const reservationData = {
+    Notes: form.notes.value,
+    Date: (`${form.dt.value} ${form.tm.value}:00`), 
+    Size: (form.size.value),
+    ClientId: ""
+  };
+  //console.log(reservationData.Date);
+//this is an api to handle database operations
+  const endpoint = `/data-api/rest/Client/`;
+
+  //1/4 Check to see if client already exists. Database does this automatifcally.
+  //2/4 If not, create client
+  try{
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(clientData)
+  });
+//console.log(response.text);
+ // alert ('response formed successfully: ' + response.value);
+  const result = await response.json();
+
+  //3/4 Retrieve client id by email
+   const endpoint2 = `/data-api/rest/Reservation/`;
+  try{
+    //gets the id of client by phone number
+    //console.log(clientData.Phone);
+const endpoint3 = `/data-api/rest/Client/Phone/${clientData.Phone}`;
+    const response2 = await fetch(endpoint3);
+  const result2 = await response2.json();
+  console.log(result2.value);
+  reservationData.ClientId = result2.value.Id;
+  } catch (error){
+    console.error(error);  
+  }
+  //4/4 Create reservation with client id
+  try{
+    reservationData.ClientId = "d7f1aefa-434b-ef11-991c-6045bdd12068";
+    const response3 = await fetch(endpoint2, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(reservationData)
+  });
+  const result3 = await response3.json();
+  } catch (error){
+    console.error(error);  
+  }
+  alert('Your reservation was made successfully')
+} catch (error){
+  console.error(error);
+}
+    closeForm()
+  }
 function reserve() {
 //Finds available reservation slots
 openForm()
@@ -201,6 +271,55 @@ function openForm() {
 
 function closeForm() {
   document.getElementById("myForm").style.display = "none";
+}
+async function submit(form){  
+  alert('clicked');
+  const data = {
+    Date: Date.parse( form.dt.value, form.tm.value),
+    Size: int.parse(form.size.value),
+    Notes: form.notes.value,
+    Client: new Client(form.fname.value, form.lname.value, form.num.value)
+  };
+//this is an api to handle database operations
+  const endpoint = `/data-api/rest/Client/`;
+  try{
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data.Client)
+  });
+  const result = await response.json();
+  //console.table(result.value);
+} catch (error){
+  console.error('error calling stored procedure');
+}
+
+try{
+  endpoint = `/data-api/rest/Person/Phone`;
+  const response = await fetch(`${endpoint}/${data.Client.PhoneNumber}`);
+  const result = await response.json();
+  data.Client.id = result.id.stringify;
+} catch (error){
+
+}
+//For the reservation, the client ID is pulled.
+  endpoint = `/data-api/rest/Reservation/`;
+  try{
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  const result = await response.json();
+  //console.table(result.value);
+} catch (error){
+  console.error('error calling stored procedure');
+}
+closeForm();
+alert('reservation successful');
+  //Your restful requests will use the built in data-api endpoint to manipulate date without writing any backend code.
+  //Because you want to trigger a stored procedure instead of simply inserting, you can either copy the stored procedure protocol for each table, or use an azure function app to substitute the built in api
+  //For now, a client will be created, then a reservation.
 }
 </script>
 
